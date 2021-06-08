@@ -583,7 +583,7 @@ class Map(object):
             if isinstance(i, Creature) and not isinstance(i, Hero) and Coord.distance(self.pos(i),
                                                                                       self.pos(self.hero)) <= 6:
                 self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
-                if i.faster :
+                if i.faster:
                     self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
 
     def update(self):
@@ -663,6 +663,7 @@ class Game(object):
                 'd': lambda hero: theGame().floor.move(hero, Coord(1, 0)),
                 'i': lambda hero: theGame().afficheFullDescription(),
                 'k': lambda hero: theGame().suicide(),
+                'r': lambda hero: theGame().rest(),
                 ' ': lambda hero: None}
 
     def __init__(self, interface, hero=None, level=1):
@@ -674,7 +675,26 @@ class Game(object):
         self.floor = None
         self._message = []
         self.interface = interface
+        self.sieste = None
 
+    def rest(self):
+        if self.sieste == 0 and self.hero.hp < self.hero.viemax:
+            self.sieste += 1
+            if self.hero.hp + 5 > self.hero.viemax:
+                self.hero.hp = self.hero.viemax
+            else:
+                self.hero.hp += 5
+            for i in range(5):
+                theGame().floor.moveAllMonsters()
+            theGame().addMessage("Wake up ! Wake up !"+'\n'+"Time to slay some monster there !")
+            theGame().hero.poisonRecovery()
+            print()
+            print(theGame().floor)
+            print(theGame().hero.description())
+            theGame().interface.partieHud()
+        else:
+            theGame().addMessage("You can't rest for the moment,"+'\n'+"try later :P")
+            theGame().interface.partieHud()
     def suicide(self):
         self.hero.__setattr__('hp', 0)
         self.interface.fenetre.destroy()
@@ -682,6 +702,7 @@ class Game(object):
     def buildFloor(self):
         """Méthode qui crée une map aléatoire avec notre héros"""
         self.floor = Map(hero=self.hero)
+        self.sieste = 0
         for key, item in self.floor._elem.items():
             key.textureAttribution()
         self.interface.generateBackground()
@@ -1217,7 +1238,7 @@ class InterfaceJeu(object):
                     font=("Algerian", int(0.007 * self.width)), anchor='center')
                 self.hud.create_text(
                     (self.width + self.width * 1.2 / 12 + 150 + 15.5 * (
-                                taille_element_jeu + 3) + 20) // 2.25 + 150 + taille_element_jeu,
+                            taille_element_jeu + 3) + 20) // 2.25 + 150 + taille_element_jeu,
                     (self.height - tailleJeu) // 2, text=c, fill='black',
                     font=("Algerian", int(0.007 * self.width)), anchor='center')
 
