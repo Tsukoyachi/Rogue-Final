@@ -168,7 +168,7 @@ class Arme(Equipment):
 class Creature(Element):
     """Class qui hérite des attributs de Element"""
 
-    def __init__(self, name, hp, abbrv=None, strength=1, xp=0, invisible=False):
+    def __init__(self, name, hp, abbrv=None, strength=1, xp=0, invisible=False, poisonous=False, faster=False):
         """Constructeur de la class Creature"""
         Element.__init__(self, name, abbrv)
         self.hp = hp
@@ -177,6 +177,8 @@ class Creature(Element):
         self.textures = []
         self.xp = xp
         self.invisible = invisible
+        self.poisonous = poisonous
+        self.faster = faster
         self.makeInvisible()
 
     def makeInvisible(self):
@@ -207,6 +209,9 @@ class Creature(Element):
             other.removeInvisibility()
             self.encaisser(other)
             theGame().addMessage(f"The {other.name} hits the {self.name + '(' + str(self.hp) + ')'}")
+            if other.poisonous:
+                self.poison += 2
+                self.poison_delay += 1
 
     def textureAttribution(self):
         """Méthode qui attribut des texture aux créatures et au Héro par la même occasion"""
@@ -230,6 +235,17 @@ class Hero(Creature):
         self.level = 1
         self._arme = None
         self._armure = None
+        self.poison = 0
+        self.poison_delay = 0
+
+    def poisonRecovery(self):
+        if self.poison > 0:
+            if self.poison_delay == 0:
+                self.poison -= 1
+                self.hp -= 1
+                self.poison_delay = 1
+            else:
+                self.poison_delay -= 1
 
     def changeEquipment(self, equipment):
         if isinstance(equipment, Arme):
@@ -281,6 +297,10 @@ class Hero(Creature):
             self.hp = self.viemax
             self.strength += 1
             theGame().addMessage(f'Well done, you are now at level {self.level} !')
+            if self.poison > 0:
+                self.poison = 0
+                self.poison_delay = 0
+                theGame().addMessage(f'Eureka, by passing a level :' + '\n' + 'the poison has been removed !')
 
     def take(self, elem):
         """Méthode qui ajoute l'élément elem à l'inventaire"""
@@ -463,6 +483,7 @@ class Map(object):
             if isinstance(e, Hero):
                 if not isinstance(self.get(dest), Stairs):
                     self.moveAllMonsters()
+                e.poisonRecovery()
                 print()
                 print(theGame().floor)
                 print(theGame().hero.description())
@@ -562,6 +583,8 @@ class Map(object):
             if isinstance(i, Creature) and not isinstance(i, Hero) and Coord.distance(self.pos(i),
                                                                                       self.pos(self.hero)) <= 6:
                 self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
+                if i.faster :
+                    self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
 
     def update(self):
         for key, element in self._elem.items():
@@ -624,12 +647,15 @@ class Game(object):
     """Class qui définit les éléments de base du jeu, touches, liste monstres,objet, la messagerie,..."""
     equipments = {0: [Equipment("heal_potion", "!", usage=lambda equip, user: heal(user)), Equipment("gold", "o")],
                   1: [Arme("sword", attaque=1, durability=20),
-                      Equipment("teleport_potion", "%", usage=lambda equip, user: teleport(user, True))],
+                      Equipment("teleport_potion", "%", usage=lambda equip, user: teleport(user, True)),
+                      Equipment("antidote", '+', usage=lambda equip, user: curePoison(user))],
                   2: [Armure("chainmail", defense=1, durability=20)],
                   3: [Equipment("portoloin", "w", usage=lambda equip, user: teleport(user, False))]}
     monsters = {0: [Creature("Gobelin", 4, xp=3), Creature("Squelette", 2, "W", xp=2),
                     Creature('Ghost', 3, xp=5, invisible=True)],
                 1: [Creature("Ork", 6, strength=2, xp=5), Creature("Blob", 10, xp=4)],
+                2: [Creature('Muddy', 5, xp=7, poisonous=True)],
+                3: [Creature('Diablotin', 4, strength=1, xp=9, faster=True)],
                 5: [Creature("Dragon", 20, strength=3, xp=10)]}
     _actions = {'z': lambda hero: theGame().floor.move(hero, Coord(0, -1)),
                 's': lambda hero: theGame().floor.move(hero, Coord(0, 1)),
@@ -671,7 +697,8 @@ class Game(object):
         result = ""
         for i in self._message:
             result += str(i)
-            result += ". "
+            if str(i)[-1] not in ['.', ';', ':', '!', '?']:
+                result += ". "
             result += '\n'
         self._message.clear()
         return result
@@ -711,6 +738,7 @@ class Game(object):
         """Méthode qui est appelée lorsque l'une des touches qui sert à utiliser un item dans l'inventaire est pressée"""
         if idx < len(self.hero._inventory):
             self.hero.use(self.hero._inventory[idx])
+            theGame().hero.poisonRecovery()
             print()
             print(theGame().floor)
             print(theGame().hero.description())
@@ -761,6 +789,7 @@ class InterfaceJeu(object):
                      'gold': {},
                      'sword': {},
                      'teleport_potion': {},
+                     'antidote': {},
                      'chainmail': {},
                      'portoloin': {},
                      'Gobelin': {},
@@ -769,6 +798,8 @@ class InterfaceJeu(object):
                      'Blob': {},
                      'Dragon': {},
                      'Ghost': {},
+                     'Muddy': {},
+                     'Diablotin': {},
                      'Hero': {},
                      'hud': {}}
         self.width = width
@@ -838,6 +869,14 @@ class InterfaceJeu(object):
             x = file.split('_')
             y = x[2].split('.')
             self.data['teleport_potion']['teleport_potion_idle_' + y[0]] = ImageTk.PhotoImage(teleport_potion)
+        # antidote
+        for file in listdir('data/antidote/idle'):
+            antidote = Image.open('data/antidote/idle/' + file)
+            antidote = antidote.resize((taille_element_jeu, taille_element_jeu),
+                                       resample=Image.NEAREST)
+            x = file.split('_')
+            y = x[2].split('.')
+            self.data['antidote']['antidote_idle_' + y[0]] = ImageTk.PhotoImage(antidote)
 
         # chainmail
         for file in listdir('data/chainmail/idle'):
@@ -863,6 +902,14 @@ class InterfaceJeu(object):
                 x = file.split('_')
                 y = x[2].split('.')
                 self.data['Gobelin']['Gobelin_idle_' + y[0]] = ImageTk.PhotoImage(Gobelin)
+        # Diablotin
+        for file in listdir('data/Diablotin/idle'):
+            if file != 'desktop.ini':
+                Diablotin = Image.open('data/Diablotin/idle/' + file)
+                Diablotin = Diablotin.resize((taille_element_jeu, taille_element_jeu), resample=Image.NEAREST)
+                x = file.split('_')
+                y = x[2].split('.')
+                self.data['Diablotin']['Diablotin_idle_' + y[0]] = ImageTk.PhotoImage(Diablotin)
         # Squelette
         for file in listdir('data/Squelette/idle'):
             if file != 'desktop.ini':
@@ -907,6 +954,14 @@ class InterfaceJeu(object):
                 x = file.split('_')
                 y = x[2].split('.')
                 self.data['Ghost']['Ghost_idle_' + y[0]] = ImageTk.PhotoImage(Ghost)
+        # Muddy
+        for file in listdir('data/Muddy/idle'):
+            if file != 'desktop.ini':
+                Muddy = Image.open('data/Muddy/idle/' + file)
+                Muddy = Muddy.resize((taille_element_jeu, taille_element_jeu), resample=Image.NEAREST)
+                x = file.split('_')
+                y = x[2].split('.')
+                self.data['Muddy']['Muddy_idle_' + y[0]] = ImageTk.PhotoImage(Muddy)
 
         # Hero
         for file in listdir('data/Hero/idle'):
@@ -942,6 +997,10 @@ class InterfaceJeu(object):
         gold_pile = Image.open('data/gold_pile/gold_pile.png')
         gold_pile = gold_pile.resize((int(0.03 * self.height), int(0.03 * self.height)), resample=Image.NEAREST)
         self.data['hud']['gold_pile'] = ImageTk.PhotoImage(gold_pile)
+
+        Poison = Image.open('data/afflictions/poison/poison_idle_0.png')
+        Poison = Poison.resize((taille_element_jeu, taille_element_jeu), resample=Image.NEAREST)
+        self.data['hud']['poison'] = ImageTk.PhotoImage(Poison)
 
         message_slot = Image.open('data/message_slot/message_slot.png')
         message_slot = message_slot.resize((int(0.35 * self.width), int(0.23 * self.height)), resample=Image.NEAREST)
@@ -1020,17 +1079,17 @@ class InterfaceJeu(object):
 
         self.hud.create_text((self.width * 1.2 / 12, (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080)),
                              text=theGame().hero.name,
-                             font=("Algerian", int(0.014 * self.width)), fill='blue', anchor='nw')
+                             font=("Algerian", int(0.012 * self.width)), fill='blue', anchor='nw')
 
         self.hud.create_text((width * 1.2 / 12, (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + (int(
             self.height * 210 / 1080) - int(self.height * 67.5 / 1080)) // 2 + 5),
                              text='Level : ' + str(theGame().hero.level),
-                             font=("Algerian", int(0.014 * self.width)), fill='red', anchor='w')
+                             font=("Algerian", int(0.012 * self.width)), fill='red', anchor='w')
 
         self.hud.create_text((width * 1.2 / 12, (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
             self.height * 210 / 1080) - int(self.height * 67.5 / 1080) + 5 + 4),
                              text='Xp : ' + str(theGame().hero.xp) + '/' + str(theGame().hero.level * 10),
-                             font=("Algerian", int(0.014 * self.width)), fill='green', anchor='sw')
+                             font=("Algerian", int(0.012 * self.width)), fill='green', anchor='sw')
 
         for i in range(theGame().hero.viemax):
             if i < 25:
@@ -1157,9 +1216,20 @@ class InterfaceJeu(object):
                     (self.height - tailleJeu) // 2, text=b, fill='black',
                     font=("Algerian", int(0.007 * self.width)), anchor='center')
                 self.hud.create_text(
-                    (self.width + self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20) // 2.25 + 150,
+                    (self.width + self.width * 1.2 / 12 + 150 + 15.5 * (
+                                taille_element_jeu + 3) + 20) // 2.25 + 150 + taille_element_jeu,
                     (self.height - tailleJeu) // 2, text=c, fill='black',
                     font=("Algerian", int(0.007 * self.width)), anchor='center')
+
+        if theGame().hero.poison > 0:
+            self.hud.create_image(self.width * 1.2 / 12 + 150 + 3.5 * (taille_element_jeu + 3) // 2 + 20,
+                                  (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080),
+                                  image=self.data['hud']['poison'], anchor='nw')
+            self.hud.create_text(
+                (self.width * 1.2 / 12 + 150 + 3.5 * (taille_element_jeu + 3) // 2 + 20 + taille_element_jeu,
+                 (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080)),
+                text=': ' + str(theGame().hero.poison) + ' tours restants', font=("Algerian", int(0.009 * self.width)),
+                anchor='nw')
         self.hud.pack(side=BOTTOM)
 
 
@@ -1177,6 +1247,17 @@ def heal(Creature):
     else:
         Creature.hp += 3
     return True
+
+
+def curePoison(Creature):
+    if Creature.poison > 0:
+        Creature.poison = 0
+        Creature.poison_delay = 0
+        theGame().addMessage("Congratulation, poison has been removed !")
+        return True
+    else:
+        theGame().addMessage("You can't cure poison if you're not poisonned !")
+        return False
 
 
 def teleport(Creature, unique):
@@ -1200,6 +1281,7 @@ def onKeyRelease(event):
     if c in list_input:
         theGame().useItem(list_input.index(c))
     if moved:
+        theGame().hero.poisonRecovery()
         print()
         print(theGame().floor)
         print(theGame().hero.description())
