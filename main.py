@@ -709,17 +709,17 @@ class Game(object):
         self.interface.partieHud()
 
     def randElement(self, collection):
-        """Méthode qui choisit un élément aléatoire dans une liste en fonction du niveau du joueur"""
+        """Méthode qui choisit un élément aléatoire dans une liste en fonction de l'étage de la map"""
         X = random.expovariate(1 / self.level)
         a = max(b for b in collection if b <= X)
         return random.choice(collection[a])
 
     def randEquipment(self):
-        """Méthode qui retourne un équipement aléatoire parmi les équipements du jeu en fonction du niveau du joueur"""
+        """Méthode qui retourne un équipement aléatoire parmi les équipements du jeu en fonction de l'étage de la map"""
         return copy.copy(self.randElement(Game.equipments))
 
     def randMonster(self):
-        """Méthode qui retourne un monstre aléatoire parmi les monstres du jeu en fonction du niveau du joueur"""
+        """Méthode qui retourne un monstre aléatoire parmi les monstres du jeu en fonction de l'étage de la map"""
         return copy.copy(self.randElement(Game.monsters))
 
     def select(self):
