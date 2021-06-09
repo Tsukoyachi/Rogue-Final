@@ -140,7 +140,7 @@ class Armure(Equipment):
         if self.durability is not None:
             self.durability -= 1
             if self.durability <= 0:
-                hero.armure.remove(self)
+                hero._armure=None
                 theGame().addMessage(f"Flûte alors {self.name} s'est brisé")
 
 
@@ -161,7 +161,7 @@ class Arme(Equipment):
         if self.durability is not None:
             self.durability -= 1
             if self.durability <= 0:
-                hero.arme.remove(self)
+                hero._arme=None
                 theGame().addMessage(f"Flûte alors {self.name} s'est brisé")
 
 
