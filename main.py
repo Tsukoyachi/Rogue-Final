@@ -1320,7 +1320,7 @@ def heal(Creature, amount):
 
 
 def ManaRecovery(Hero, amount):
-    """Fonction qui ajoute 3 pv à la créature qui appelle cette fonction via une potion ou autre..."""
+    """Fonction qui ajoute amount mana à la créature qui appelle cette fonction via une potion ou autre..."""
     if Hero.mana == Hero.manamax:
         theGame().addMessage("You can't recover mana when you're full !")
         return False
