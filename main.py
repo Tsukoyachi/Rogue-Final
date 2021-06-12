@@ -74,14 +74,14 @@ class Stairs(Element):
         if theGame().level % 2 == 0:
             for key, item in theGame().floor._elem.items():
                 if isinstance(key, Creature) and not isinstance(key, Hero):
-                    key.viemax += theGame().level // 2
-                    key.hp = key.viemax
+                    key.hpmax += theGame().level // 2
+                    key.hp = key.hpmax
                     key.strength += (theGame().level - 1) // 2
         else:
             for key, item in theGame().floor._elem.items():
                 if isinstance(key, Creature) and not isinstance(key, Hero):
-                    key.viemax += (theGame().level - 1) // 2
-                    key.hp = key.viemax
+                    key.hpmax += (theGame().level - 1) // 2
+                    key.hp = key.hpmax
                     key.strength += theGame().level // 2
 
     def textureAttribution(self):
@@ -140,7 +140,7 @@ class Armure(Equipment):
         if self.durability is not None:
             self.durability -= 1
             if self.durability <= 0:
-                hero._armure=None
+                hero._armure = None
                 theGame().addMessage(f"Flûte alors {self.name} s'est brisé")
 
 
@@ -161,7 +161,7 @@ class Arme(Equipment):
         if self.durability is not None:
             self.durability -= 1
             if self.durability <= 0:
-                hero._arme=None
+                hero._arme = None
                 theGame().addMessage(f"Flûte alors {self.name} s'est brisé")
 
 
@@ -172,7 +172,7 @@ class Creature(Element):
         """Constructeur de la class Creature"""
         Element.__init__(self, name, abbrv)
         self.hp = hp
-        self.viemax = hp
+        self.hpmax = hp
         self.strength = strength
         self.textures = []
         self.xp = xp
@@ -227,16 +227,34 @@ class Creature(Element):
 class Hero(Creature):
     """Class qui hérite des attrubuts de Creature"""
 
-    def __init__(self, name="Hero", hp=10, abbrv="@", strength=2, gold=0, xp=0):
+    def __init__(self, name="Hero", hp=10, abbrv="@", strength=2, gold=0, xp=0, mana=10):
         """Constructeur de la class Hero"""
         Creature.__init__(self, name, hp, abbrv, strength, xp)
         self._inventory = []
         self.gold = gold
         self.level = 1
+        self.mana = mana
+        self.manamax = mana
         self._arme = None
         self._armure = None
         self.poison = 0
         self.poison_delay = 0
+
+    def magicHeal(self):
+        if self.mana >= 2 and self.hp < self.hpmax:
+            heal(self, self.hpmax * 3 // 10)
+            self.mana -= 2
+            theGame().addMessage(f"{self.name} used the spell Heal !")
+        else:
+            theGame().addMessage("Heal cannot be activated !")
+
+    def magicTeleportation(self):
+        if self.mana >= 1:
+            teleport(self, True)
+            self.mana -= 1
+            theGame().addMessage(f"{self.name} used the spell Teleportation !")
+        else:
+            theGame().addMessage("Teleportation cannot be activated !")
 
     def poisonRecovery(self):
         if self.poison > 0:
@@ -293,8 +311,8 @@ class Hero(Creature):
         if self.xp >= self.level * 10:
             self.xp -= self.level * 10
             self.level += 1
-            self.viemax += 2
-            self.hp = self.viemax
+            self.hpmax += 2
+            self.hp = self.hpmax
             self.strength += 1
             theGame().addMessage(f'Well done, you are now at level {self.level} !')
             if self.poison > 0:
@@ -645,11 +663,12 @@ class Room(object):
 
 class Game(object):
     """Class qui définit les éléments de base du jeu, touches, liste monstres,objet, la messagerie,..."""
-    equipments = {0: [Equipment("heal_potion", "!", usage=lambda equip, user: heal(user)), Equipment("gold", "o")],
+    equipments = {0: [Equipment("heal_potion", "!", usage=lambda equip, user: heal(user, 3)), Equipment("gold", "o")],
                   1: [Arme("sword", attaque=1, durability=20),
                       Equipment("teleport_potion", "%", usage=lambda equip, user: teleport(user, True)),
                       Equipment("antidote", '+', usage=lambda equip, user: curePoison(user))],
-                  2: [Armure("chainmail", defense=1, durability=20)],
+                  2: [Armure("chainmail", defense=1, durability=20),
+                      Equipment("Mana_potion", 'm', usage=lambda equip, user: ManaRecovery(user, 3))],
                   3: [Equipment("portoloin", "w", usage=lambda equip, user: teleport(user, False))]}
     monsters = {0: [Creature("Gobelin", 4, xp=3), Creature("Squelette", 2, "W", xp=2),
                     Creature('Ghost', 3, xp=5, invisible=True)],
@@ -664,7 +683,9 @@ class Game(object):
                 'i': lambda hero: theGame().afficheFullDescription(),
                 'k': lambda hero: theGame().suicide(),
                 'r': lambda hero: theGame().rest(),
-                ' ': lambda hero: None}
+                ' ': lambda hero: None,
+                ',': lambda hero: hero.magicHeal(),
+                ';': lambda hero: hero.magicTeleportation()}
 
     def __init__(self, interface, hero=None, level=1):
         """Constructeur de la class Game"""
@@ -678,23 +699,24 @@ class Game(object):
         self.sieste = None
 
     def rest(self):
-        if self.sieste == 0 and self.hero.hp < self.hero.viemax:
+        if self.sieste == 0 and self.hero.hp < self.hero.hpmax:
             self.sieste += 1
-            if self.hero.hp + 5 > self.hero.viemax:
-                self.hero.hp = self.hero.viemax
+            if self.hero.hp + 5 > self.hero.hpmax:
+                self.hero.hp = self.hero.hpmax
             else:
                 self.hero.hp += 5
             for i in range(5):
                 theGame().floor.moveAllMonsters()
-            theGame().addMessage("Wake up ! Wake up !"+'\n'+"Time to slay some monster there !")
+            theGame().addMessage("Wake up ! Wake up !" + '\n' + "Time to slay some monster there !")
             theGame().hero.poisonRecovery()
             print()
             print(theGame().floor)
             print(theGame().hero.description())
             theGame().interface.partieHud()
         else:
-            theGame().addMessage("You can't rest for the moment,"+'\n'+"try later :P")
+            theGame().addMessage("You can't rest for the moment," + '\n' + "try later :P")
             theGame().interface.partieHud()
+
     def suicide(self):
         self.hero.__setattr__('hp', 0)
         self.interface.fenetre.destroy()
@@ -811,6 +833,7 @@ class InterfaceJeu(object):
                      'sword': {},
                      'teleport_potion': {},
                      'antidote': {},
+                     'Mana_potion': {},
                      'chainmail': {},
                      'portoloin': {},
                      'Gobelin': {},
@@ -890,6 +913,7 @@ class InterfaceJeu(object):
             x = file.split('_')
             y = x[2].split('.')
             self.data['teleport_potion']['teleport_potion_idle_' + y[0]] = ImageTk.PhotoImage(teleport_potion)
+
         # antidote
         for file in listdir('data/antidote/idle'):
             antidote = Image.open('data/antidote/idle/' + file)
@@ -898,6 +922,15 @@ class InterfaceJeu(object):
             x = file.split('_')
             y = x[2].split('.')
             self.data['antidote']['antidote_idle_' + y[0]] = ImageTk.PhotoImage(antidote)
+
+        # Mana_potion
+        for file in listdir('data/Mana/idle'):
+            Mana = Image.open('data/Mana/idle/' + file)
+            Mana = Mana.resize((taille_element_jeu, taille_element_jeu),
+                               resample=Image.NEAREST)
+            x = file.split('_')
+            y = x[3].split('.')
+            self.data['Mana_potion']['Mana_potion_idle_' + y[0]] = ImageTk.PhotoImage(Mana)
 
         # chainmail
         for file in listdir('data/chainmail/idle'):
@@ -1112,7 +1145,19 @@ class InterfaceJeu(object):
                              text='Xp : ' + str(theGame().hero.xp) + '/' + str(theGame().hero.level * 10),
                              font=("Algerian", int(0.012 * self.width)), fill='green', anchor='sw')
 
-        for i in range(theGame().hero.viemax):
+        self.hud.create_image((self.width * 1.2 / 12 + 150 + 2.5 * (taille_element_jeu + 3) + 20,
+                               (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                                   self.height * 210 / 1080) - int(self.height * 67.5 / 1080) + 5 + 4),
+                              image=self.data['Mana_potion']['Mana_potion_idle_0'], anchor='s')
+
+        self.hud.create_text(
+            (self.width * 1.2 / 12 + 150 + 2.5 * (taille_element_jeu + 3) + 20 + 2.1 * taille_element_jeu,
+             (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                 self.height * 210 / 1080) - int(self.height * 67.5 / 1080) + 5 + 4),
+            text=': ' + str(theGame().hero.mana) + ' / ' + str(theGame().hero.manamax),
+            font=("Algerian", int(0.01 * self.width)), fill='black', anchor='s')
+
+        for i in range(theGame().hero.hpmax):
             if i < 25:
                 a = 0.16 * self.height
                 b = 0.1 * self.width + i * int(0.03 * self.height)
@@ -1128,35 +1173,39 @@ class InterfaceJeu(object):
 
         self.hud.create_text(
             (self.width * 1.2 / 12 + 150 + 10 * (taille_element_jeu + 3) // 2 + 20,
-             (self.height - tailleJeu) // 4 + height * 1.25 / 12 - 20),
+             (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080)),
             text='Inventaire :', font=("Algerian", int(0.014 * self.width)), fill='purple',
-            anchor='s')
+            anchor='n')
 
         for i in range(10):
             self.hud.create_image(
                 self.width * 1.2 / 12 + 150 + i * (taille_element_jeu + 3) + 20,
-                (self.height - tailleJeu) // 4 + height * 1.25 / 12 - 20,
+                (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                    0.014 * self.width) + 8 * self.height // 1080,
                 image=self.data['hud']['inventory_slot'],
                 anchor='nw')
             liste_input_inventaire = ['à', '&', 'é', '"', "'", '(', '-', 'è', '_', 'ç']
             if i != 0:
                 self.hud.create_text(
                     (self.width * 1.2 / 12 + 150 + (i - 1) * (taille_element_jeu + 3) + 20 + 0.5 * taille_element_jeu,
-                     (self.height - tailleJeu) // 4 + height * 1.25 / 12 - 20 + taille_element_jeu),
+                     (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                         0.014 * self.width) + taille_element_jeu + 8 * self.height // 1080),
                     text=f'{liste_input_inventaire[i]}',
                     font=("Arial", int(0.75 * taille_element_jeu)),
                     fill='blue', anchor='n')
             else:
                 self.hud.create_text(
                     (self.width * 1.2 / 12 + 150 + 9 * (taille_element_jeu + 3) + 20 + 0.5 * taille_element_jeu,
-                     (self.height - tailleJeu) // 4 + height * 1.25 / 12 - 20 + taille_element_jeu),
+                     (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                         0.014 * self.width) + taille_element_jeu + 8 * self.height // 1080),
                     text=f'{liste_input_inventaire[i]}',
                     font=("Arial", int(0.70 * taille_element_jeu)),
                     fill='blue', anchor='n')
 
         for i in range(len(theGame().hero._inventory)):
             self.hud.create_image(self.width * 1.2 / 12 + 150 + i * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + height * 1.25 / 12 - 20,
+                                  (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080) + int(
+                                      0.014 * self.width) + 8 * self.height // 1080,
                                   image=theGame().hero._inventory[i].textures[0], anchor='nw')
 
         self.hud.create_image(self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
@@ -1243,11 +1292,11 @@ class InterfaceJeu(object):
                     font=("Algerian", int(0.007 * self.width)), anchor='center')
 
         if theGame().hero.poison > 0:
-            self.hud.create_image(self.width * 1.2 / 12 + 150 + 3.5 * (taille_element_jeu + 3) // 2 + 20,
+            self.hud.create_image(self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
                                   (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080),
                                   image=self.data['hud']['poison'], anchor='nw')
             self.hud.create_text(
-                (self.width * 1.2 / 12 + 150 + 3.5 * (taille_element_jeu + 3) // 2 + 20 + taille_element_jeu,
+                (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
                  (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080)),
                 text=': ' + str(theGame().hero.poison) + ' tours restants', font=("Algerian", int(0.009 * self.width)),
                 anchor='nw')
@@ -1258,15 +1307,27 @@ def theGame(game=Game(InterfaceJeu(width, height, fenetre))):
     return game
 
 
-def heal(Creature):
-    """Fonction qui ajoute 3 pv à la créature qui appelle cette fonction via une potion ou autre..."""
-    if Creature.hp == Creature.viemax:
+def heal(Creature, amount):
+    """Fonction qui ajoute amount pv à la créature qui appelle cette fonction via une potion ou autre..."""
+    if Creature.hp == Creature.hpmax:
         theGame().addMessage("You can't heal yourself when you're not injured")
         return False
-    elif Creature.hp + 3 > Creature.viemax:
-        Creature.hp = Creature.viemax
+    elif Creature.hp + amount > Creature.hpmax:
+        Creature.hp = Creature.hpmax
     else:
-        Creature.hp += 3
+        Creature.hp += amount
+    return True
+
+
+def ManaRecovery(Hero, amount):
+    """Fonction qui ajoute 3 pv à la créature qui appelle cette fonction via une potion ou autre..."""
+    if Hero.mana == Hero.manamax:
+        theGame().addMessage("You can't recover mana when you're full !")
+        return False
+    elif Hero.mana + amount > Hero.manamax:
+        Hero.mana = Hero.manamax
+    else:
+        Hero.mana += amount
     return True
 
 
@@ -1297,7 +1358,7 @@ def onKeyRelease(event):
     print(c)
     if c in Game._actions:
         Game._actions[c](theGame().hero)
-    if c in [' ']:
+    if c in [' ', ',',';']:
         moved = True
     if c in list_input:
         theGame().useItem(list_input.index(c))
