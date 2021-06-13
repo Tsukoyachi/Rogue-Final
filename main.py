@@ -196,6 +196,7 @@ class Creature(Element):
     def meet(self, other):
         """Méthode pour gérer les combats entre créature et héro"""
         if isinstance(other, Hero):
+            other.removeInvisibility()
             self.removeInvisibility()
             other.hit(self)
             theGame().addMessage(f"The {other.name} hits the {self.name + '(' + str(self.hp) + ')'}")
@@ -239,6 +240,23 @@ class Hero(Creature):
         self._armure = None
         self.poison = 0
         self.poison_delay = 0
+        self.invisibility = 0
+
+    def invisibilityDecrease(self):
+        if self.invisibility>0:
+            self.invisibility-=1
+
+    def removeInvisibility(self):
+        if self.invisibility>0:
+            self.invisibility=0
+
+    def magicInvisibility(self):
+        if self.mana >= 3:
+            self.invisibility += 4
+            self.mana-=3
+            theGame().addMessage("Be quiet ! Now you're hidden !")
+        else :
+            theGame().addMessage("Invisibility cannot be activated !")
 
     def magicHeal(self):
         if self.mana >= 2 and self.hp < self.hpmax:
@@ -502,6 +520,7 @@ class Map(object):
                 if not isinstance(self.get(dest), Stairs):
                     self.moveAllMonsters()
                 e.poisonRecovery()
+                e.invisibilityDecrease()
                 print()
                 print(theGame().floor)
                 print(theGame().hero.description())
@@ -599,7 +618,7 @@ class Map(object):
         """Méthode qui permet de déplacer simultanément tout les monstres situés à moins de 6 cases du héros"""
         for i in self._elem:
             if isinstance(i, Creature) and not isinstance(i, Hero) and Coord.distance(self.pos(i),
-                                                                                      self.pos(self.hero)) <= 6:
+                                                                                      self.pos(self.hero)) <= 6 and theGame().hero.invisibility==0:
                 self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
                 if i.faster:
                     self.move(i, Coord.direction(self.pos(i), self.pos(self.hero)))
@@ -610,7 +629,10 @@ class Map(object):
                 key.update()
 
     def stairsPlacement(self):
-        self.put(random.choice(self._rooms[1:]).center(), Stairs(name='stairs'))
+        try:
+            self.put(random.choice(self._rooms[1:]).center(), Stairs(name='stairs'))
+        except ValueError:
+            self.put(random.choice(self._rooms[1:]).center(), Stairs(name='stairs'))
 
 
 class Room(object):
@@ -685,7 +707,8 @@ class Game(object):
                 'r': lambda hero: theGame().rest(),
                 ' ': lambda hero: None,
                 ',': lambda hero: hero.magicHeal(),
-                ';': lambda hero: hero.magicTeleportation()}
+                ';': lambda hero: hero.magicTeleportation(),
+                ':': lambda hero: hero.magicInvisibility()}
 
     def __init__(self, interface, hero=None, level=1):
         """Constructeur de la class Game"""
@@ -1056,6 +1079,10 @@ class InterfaceJeu(object):
         Poison = Poison.resize((taille_element_jeu, taille_element_jeu), resample=Image.NEAREST)
         self.data['hud']['poison'] = ImageTk.PhotoImage(Poison)
 
+        invisibility = Image.open('data/afflictions/invisibility/invisibility_idle_0.png')
+        invisibility = invisibility.resize((taille_element_jeu, taille_element_jeu), resample=Image.NEAREST)
+        self.data['hud']['invisibility'] = ImageTk.PhotoImage(invisibility)
+
         message_slot = Image.open('data/message_slot/message_slot.png')
         message_slot = message_slot.resize((int(0.35 * self.width), int(0.23 * self.height)), resample=Image.NEAREST)
         self.data['hud']['message_slot'] = ImageTk.PhotoImage(message_slot)
@@ -1209,54 +1236,54 @@ class InterfaceJeu(object):
                                   image=theGame().hero._inventory[i].textures[0], anchor='nw')
 
         self.hud.create_image(self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
-                              (self.height - tailleJeu) // 4 + 3.5 * taille_element_jeu + 10,
+                              (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 10,
                               image=self.data['hud']['gold_pile'], anchor='nw')
 
         self.hud.create_text(
             (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-             (self.height - tailleJeu) // 4 + 3.5 * taille_element_jeu + 10),
+             (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 10),
             text='  = ' + str(theGame().hero.gold), font=("Algerian", int(0.014 * self.width)),
             fill='blue', anchor='nw')
 
         self.hud.create_text(
             (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
-             (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 5),
+             (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu + 5),
             text='Armure : ',
             font=("Algerian", int(0.014 * self.width)),
             fill='dark blue', anchor='nw')
 
         self.hud.create_image(self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20,
-                              (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 5,
+                              (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu + 5,
                               image=self.data['hud']['inventory_slot'], anchor='nw')
         if theGame().hero._armure is not None:
             self.hud.create_image(self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 5,
+                                  (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu + 5,
                                   image=theGame().hero._armure.textures[0], anchor='nw')
             self.hud.create_text(
                 self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-                (self.height - tailleJeu) // 4 + 2.5 * taille_element_jeu + 5,
+                (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu + 5,
                 text='(' + str(theGame().hero._armure.durability) + '/' + str(
                     theGame().hero._armure.maxdurability) + ')', font=("Algerian", int(0.010 * self.width)),
                 fill='dark blue', anchor='nw')
 
         self.hud.create_text(
             (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
-             (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu),
+             (self.height - tailleJeu) // 4 + 0.5 * taille_element_jeu),
             text='Arme : ',
             font=("Algerian", int(0.014 * self.width)),
             fill='dark blue', anchor='nw')
 
         self.hud.create_image(self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20,
-                              (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu,
+                              (self.height - tailleJeu) // 4 + 0.5 * taille_element_jeu,
                               image=self.data['hud']['inventory_slot'], anchor='nw')
 
         if theGame().hero._arme is not None:
             self.hud.create_image(self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu,
+                                  (self.height - tailleJeu) // 4 + 0.5 * taille_element_jeu,
                                   image=theGame().hero._arme.textures[0], anchor='nw')
             self.hud.create_text(
                 self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-                (self.height - tailleJeu) // 4 + 1.5 * taille_element_jeu,
+                (self.height - tailleJeu) // 4 + 0.5 * taille_element_jeu,
                 text='(' + str(theGame().hero._arme.durability) + '/' + str(
                     theGame().hero._arme.maxdurability) + ')', font=("Algerian", int(0.010 * self.width)),
                 fill='dark blue', anchor='nw')
@@ -1293,13 +1320,23 @@ class InterfaceJeu(object):
 
         if theGame().hero.poison > 0:
             self.hud.create_image(self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080),
+                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu,
                                   image=self.data['hud']['poison'], anchor='nw')
             self.hud.create_text(
                 (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-                 (self.height - tailleJeu) // 4 + int(self.height * 10 / 1080)),
-                text=': ' + str(theGame().hero.poison) + ' tours restants', font=("Algerian", int(0.009 * self.width)),
+                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu),
+                text=': ' + str(theGame().hero.poison), font=("Algerian", int(0.009 * self.width)),
                 anchor='nw')
+        if theGame().hero.invisibility > 0:
+            self.hud.create_image(self.width * 1.2 / 12 + 150 + 14 * (taille_element_jeu + 3) + 20,
+                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu,
+                                  image=self.data['hud']['invisibility'], anchor='nw')
+            self.hud.create_text(
+                (self.width * 1.2 / 12 + 150 + 14 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
+                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu),
+                text=': ' + str(theGame().hero.invisibility), font=("Algerian", int(0.009 * self.width)),
+                anchor='nw')
+
         self.hud.pack(side=BOTTOM)
 
 
@@ -1358,12 +1395,13 @@ def onKeyRelease(event):
     print(c)
     if c in Game._actions:
         Game._actions[c](theGame().hero)
-    if c in [' ', ',',';']:
+    if c in [' ', ',', ';',':']:
         moved = True
     if c in list_input:
         theGame().useItem(list_input.index(c))
     if moved:
         theGame().hero.poisonRecovery()
+        theGame().hero.invisibilityDecrease()
         print()
         print(theGame().floor)
         print(theGame().hero.description())
