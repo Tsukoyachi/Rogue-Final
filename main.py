@@ -424,7 +424,7 @@ class Map(object):
     empty = " "
     dir = {"z": Coord(0, -1), "s": Coord(0, 1), "d": Coord(1, 0), "q": Coord(-1, 0)}
 
-    def __init__(self, size=20, nbrooms=7, hero=None):
+    def __init__(self, size=20, nbrooms=15, hero=None):
         "Constructeur de Map"
         self.size = size
         if hero == None:
