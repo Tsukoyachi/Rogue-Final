@@ -359,8 +359,7 @@ class Hero(Creature):
         for key, item in self.__dict__.items():
             if '_' not in key and key != 'textures':
                 res += f'> {key} : {item}\n'
-        res += f'> INVENTORY : {[x.name for x in self._inventory]}'
-        return res
+        return res[:-1]
 
     def use(self, item):
         """Méthode qui est appelé quand on veut utiliser un item afin de vérifier que l'item existe et qu'il est dans
@@ -1093,11 +1092,6 @@ class InterfaceJeu(object):
             (int((self.width - taille_element_jeu * 20) / 2), int((self.width - taille_element_jeu * 20) / 2)),
             resample=Image.NEAREST)
         self.data['hud']['Pixel_art_hero'] = ImageTk.PhotoImage(Pixel_art_hero)
-
-        Tutoriel = Image.open('data/tuto/tuto.png')
-        Tutoriel = Tutoriel.resize((int((self.width - taille_element_jeu * 20) / 2),
-                                    int((self.width - taille_element_jeu * 20) / 2)), resample=Image.NEAREST)
-        self.data['hud']['Tutoriel'] = ImageTk.PhotoImage(Tutoriel)
 
     def generateBackground(self):
         """Génère une liste d'image unique pour la méthode PartieJeu afin qu'il ne se modifie pas quand je régènère
