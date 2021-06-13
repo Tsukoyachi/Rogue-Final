@@ -1118,9 +1118,9 @@ class InterfaceJeu(object):
         self.jeu.delete("all")
         self.jeu.create_image(-5, 0,
                               image=self.data['hud']['Pixel_art_hero'], anchor='nw')
-        self.jeu.create_image(taille_jeu + int((self.width - taille_jeu) / 2),
-                              (taille_jeu - (self.width - taille_jeu) // 2) // 2, image=self.data['hud']['Tutoriel'],
-                              anchor='nw')
+        self.jeu.create_text(taille_jeu + int((self.width - taille_jeu) / 2) + 5*self.width/1920,
+                              (taille_jeu) // 2, text="Cher aventurier courageux, laisse-moi t'enseigner"+'\n'+ 'les bases nécessaires à ton voyage :'+'\n'+'\n'+'- z,q,s,d : les déplacements.'+'\n'+'\n'+"- les touches sous l'inventaire pour utiliser"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- Ctrl + les touches sous l'inventaire pour détruire"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- ',' : sort de soin"+'\n'+'\n'+"- ';' : sort de téleportation"+'\n'+'\n'+"- ':' : sort d'invisibilité"+'\n'+'\n'+'- espace : saute un tour'+'\n'+'\n'+"- 'k' : suicide du personnage, entraine un game over immédiat"+'\n'+'et une fermeture du jeu.',
+                              font=("Algerian", int(0.008 * self.width)), fill='blue',anchor='w')
         for key, item in theGame().floor._elem.items():
             key.update(1)
         for i in range(20):
@@ -1185,12 +1185,13 @@ class InterfaceJeu(object):
             font=("Algerian", int(0.01 * self.width)), fill='black', anchor='s')
 
         for i in range(theGame().hero.hpmax):
-            if i < 25:
+            nb_coeur_ligne = (((self.width + self.width * 1.2 / 12 + 150 + 15.5 * (taille_element_jeu + 3) + 20) // 2 - int(0.35 * self.width)//2 - 0.1 * self.width)//(int(0.03 * self.height)))
+            if i < nb_coeur_ligne:
                 a = 0.16 * self.height
                 b = 0.1 * self.width + i * int(0.03 * self.height)
             else:
-                a = 0.16 * self.height + int(0.03 * self.height) * (i // 25)
-                b = 0.1 * self.width + (i - 25 * (i // 25)) * int(0.03 * self.height)
+                a = 0.16 * self.height + int(0.03 * self.height) * (i // nb_coeur_ligne)
+                b = 0.1 * self.width + (i - nb_coeur_ligne * (i // nb_coeur_ligne)) * int(0.03 * self.height)
             if i > theGame().hero.hp - 1:
                 self.hud.create_image(b, (self.height - tailleJeu) // 4 + a, image=self.data['hud']['heart_empty'],
                                       anchor='nw')
@@ -1320,20 +1321,20 @@ class InterfaceJeu(object):
 
         if theGame().hero.poison > 0:
             self.hud.create_image(self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu,
+                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu + 15,
                                   image=self.data['hud']['poison'], anchor='nw')
             self.hud.create_text(
                 (self.width * 1.2 / 12 + 150 + 11 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu),
+                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu + 15),
                 text=': ' + str(theGame().hero.poison), font=("Algerian", int(0.009 * self.width)),
                 anchor='nw')
         if theGame().hero.invisibility > 0:
             self.hud.create_image(self.width * 1.2 / 12 + 150 + 14 * (taille_element_jeu + 3) + 20,
-                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu,
+                                  (self.height - tailleJeu) // 4 + 4 * taille_element_jeu + 15,
                                   image=self.data['hud']['invisibility'], anchor='nw')
             self.hud.create_text(
                 (self.width * 1.2 / 12 + 150 + 14 * (taille_element_jeu + 3) + 20 + taille_element_jeu,
-                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu),
+                 (self.height - tailleJeu) // 4 + 4 * taille_element_jeu + 15),
                 text=': ' + str(theGame().hero.invisibility), font=("Algerian", int(0.009 * self.width)),
                 anchor='nw')
 
