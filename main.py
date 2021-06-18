@@ -250,6 +250,16 @@ class Hero(Creature):
         self.poison_delay = 0
         self.invisibility = 0
 
+    def deleteItem(self, index):
+        """Méthode qui est appelée lorsque l'une des touches qui sert à supprimer un item dans l'inventaire est pressée"""
+        if index < len(self._inventory):
+            theGame().addMessage(f'You destroy a {self._inventory[index].name}')
+            self._inventory.pop(index)
+            print()
+            print(theGame().floor)
+            print(theGame().hero.description())
+            theGame().interface.partieHud()
+
     def invisibilityDecrease(self):
         if self.invisibility>0:
             self.invisibility-=1
@@ -808,7 +818,7 @@ class Game(object):
         """Méthode pour me faire les bind de touches relatif à la suppression d'objet"""
         for idx, item in enumerate(list_input):
             fenetre.bind(f"<Control-KeyRelease-{item}>",
-                         lambda e, n=idx: self.deleteItem(n))
+                         lambda e, n=idx: self.hero.deleteItem(n))
 
     def useItem(self, idx):
         """Méthode qui est appelée lorsque l'une des touches qui sert à utiliser un item dans l'inventaire est pressée"""
@@ -821,15 +831,7 @@ class Game(object):
             self.floor.moveAllMonsters()
             self.interface.partieHud()
 
-    def deleteItem(self, index):
-        """Méthode qui est appelée lorsque l'une des touches qui sert à supprimer un item dans l'inventaire est pressée"""
-        if index < len(self.hero._inventory):
-            theGame().addMessage(f'You destroy a {self.hero._inventory[index].name}')
-            self.hero._inventory.pop(index)
-            print()
-            print(theGame().floor)
-            print(theGame().hero.description())
-            self.interface.partieHud()
+
 
     def play(self):
         """Main game loop"""
@@ -1124,7 +1126,7 @@ class InterfaceJeu(object):
         self.jeu.create_image(-5, 0,
                               image=self.data['hud']['Pixel_art_hero'], anchor='nw')
         self.jeu.create_text(taille_jeu + int((self.width - taille_jeu) / 2) + 5*self.width/1920,
-                              (taille_jeu) // 2, text="Cher aventurier courageux, laisse-moi t'enseigner"+'\n'+ 'les bases nécessaires à ton voyage :'+'\n'+'\n'+'- z,q,s,d : les déplacements.'+'\n'+'\n'+"- les touches sous l'inventaire pour utiliser"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- Ctrl + les touches sous l'inventaire pour détruire"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- ',' : sort de soin"+'\n'+'\n'+"- ';' : sort de téleportation"+'\n'+'\n'+"- ':' : sort d'invisibilité"+'\n'+'\n'+'- espace : saute un tour'+'\n'+'\n'+"- 'k' : suicide du personnage, entraine un game over immédiat"+'\n'+'et une fermeture du jeu.',
+                              (taille_jeu) // 2, text="Cher aventurier courageux, laisse-moi t'enseigner"+'\n'+ 'les bases nécessaires à ton voyage :'+'\n'+'\n'+'- z,q,s,d : les déplacements.'+'\n'+'\n'+"- les touches sous l'inventaire pour utiliser"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- Ctrl + les touches sous l'inventaire pour détruire"+'\n'+"l'objet de la case en question."+'\n'+'\n'+"- ',' : sort de soin"+'\n'+'\n'+"- ';' : sort de téleportation"+'\n'+'\n'+"- ':' : sort d'invisibilité"+'\n'+'\n'+"- 'r' : permet de se reposer 1 fois par étage et de récupérer"+'\n'+" 5 hp, mais les monstres bougent 5 fois."+'\n'+'\n'+'- espace : saute un tour'+'\n'+'\n'+"- 'k' : suicide du personnage, entraine un game over immédiat"+'\n'+'et une fermeture du jeu.',
                               font=("Algerian", int(0.008 * self.width)), fill='blue',anchor='w')
         for key, item in theGame().floor._elem.items():
             key.update(1)
