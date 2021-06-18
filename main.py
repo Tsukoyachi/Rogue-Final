@@ -331,7 +331,7 @@ class Hero(Creature):
                 self.hp = self.hpmax
             else:
                 self.hp += 5
-            for i in range(10):
+            for i in range(5):
                 theGame().floor.moveAllMonsters()
             theGame().addMessage("Wake up ! Wake up !" + '\n' + "Time to slay some monster there !")
             theGame().hero.poisonRecovery()
