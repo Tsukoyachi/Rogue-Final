@@ -215,6 +215,7 @@ class Creature(Element):
                 return True
             return False
         else:
+            assert isinstance(self, Hero)
             other.removeInvisibility()
             self.encaisser(other)
             theGame().addMessage(f"The {other.name} hits the {self.name + '(' + str(self.hp) + ')'}")
