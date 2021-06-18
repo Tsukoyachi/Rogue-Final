@@ -1,11 +1,13 @@
 from subprocess import call
-
-choix = input("I'll install a few library for the program, do you wish to proceed ? (y or n) : ")
-if choix == 'y':
-    call(["python", "-m", "pip", "install", "-r", "requirements.txt"])
-else :
-    print("I can't run without my library have a nice day :P")
-    exit()
+try :
+    from PIL import Image, ImageTk
+except:
+    choix = input("I'll install a few library for the program, do you wish to proceed ? (y or n) : ")
+    if choix == 'y':
+        call(["python", "-m", "pip", "install", "-r", "requirements.txt"])
+    else :
+        print("I can't run without my library have a nice day :P")
+        exit()
 
 import random
 import copy
