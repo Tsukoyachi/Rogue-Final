@@ -324,6 +324,25 @@ class Hero(Creature):
         else:
             self.hp -= monster.strength
 
+    def rest(self):
+        if theGame().sieste == 0 and self.hp < self.hpmax:
+            theGame().sieste += 1
+            if self.hp + 5 > self.hpmax:
+                self.hp = self.hpmax
+            else:
+                self.hp += 5
+            for i in range(10):
+                theGame().floor.moveAllMonsters()
+            theGame().addMessage("Wake up ! Wake up !" + '\n' + "Time to slay some monster there !")
+            theGame().hero.poisonRecovery()
+            print()
+            print(theGame().floor)
+            print(theGame().hero.description())
+            theGame().interface.partieHud()
+        else:
+            theGame().addMessage("You can't rest for the moment," + '\n' + "try later :P")
+            theGame().interface.partieHud()
+
     def gainLevel(self):
         """Méthode qui gère le passage au niveau supérieur"""
         if self.xp >= self.level * 10:
@@ -332,6 +351,7 @@ class Hero(Creature):
             self.hpmax += 2
             self.hp = self.hpmax
             self.strength += 1
+            self.mana = self.manamax
             theGame().addMessage(f'Well done, you are now at level {self.level} !')
             if self.poison > 0:
                 self.poison = 0
@@ -703,7 +723,7 @@ class Game(object):
                 'd': lambda hero: theGame().floor.move(hero, Coord(1, 0)),
                 'i': lambda hero: theGame().afficheFullDescription(),
                 'k': lambda hero: theGame().suicide(),
-                'r': lambda hero: theGame().rest(),
+                'r': lambda hero: hero.rest(),
                 ' ': lambda hero: None,
                 ',': lambda hero: hero.magicHeal(),
                 ';': lambda hero: hero.magicTeleportation(),
@@ -720,24 +740,7 @@ class Game(object):
         self.interface = interface
         self.sieste = None
 
-    def rest(self):
-        if self.sieste == 0 and self.hero.hp < self.hero.hpmax:
-            self.sieste += 1
-            if self.hero.hp + 5 > self.hero.hpmax:
-                self.hero.hp = self.hero.hpmax
-            else:
-                self.hero.hp += 5
-            for i in range(5):
-                theGame().floor.moveAllMonsters()
-            theGame().addMessage("Wake up ! Wake up !" + '\n' + "Time to slay some monster there !")
-            theGame().hero.poisonRecovery()
-            print()
-            print(theGame().floor)
-            print(theGame().hero.description())
-            theGame().interface.partieHud()
-        else:
-            theGame().addMessage("You can't rest for the moment," + '\n' + "try later :P")
-            theGame().interface.partieHud()
+
 
     def suicide(self):
         self.hero.__setattr__('hp', 0)
